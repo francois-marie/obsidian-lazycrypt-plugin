@@ -1,93 +1,217 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, LazyCryptSettings, LazyCryptSettingTab} from "./settings";
+import { Notice, Plugin, FileSystemAdapter } from 'obsidian';
+import * as path from 'path';
+import * as fs from 'fs';
+import { LazyCrypt } from './lazycrypt';
+import { DEFAULT_SETTINGS, LazyCryptSettings, LazyCryptSettingTab } from "./settings";
 
+/**
+ * LazyCrypt plugin for Obsidian.
+ * Maintains an encrypted git history of the vault using age encryption.
+ */
 export default class LazyCryptPlugin extends Plugin {
 	settings: LazyCryptSettings;
+	lazycrypt: LazyCrypt;
+	statusBarItemEl: HTMLElement;
+	autoSyncIntervalId?: number;
+	autoPushIntervalId?: number;
 
-	async onload() {
+	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
+		const adapter = this.app.vault.adapter;
+		if (!(adapter instanceof FileSystemAdapter)) {
+			new Notice("This plugin only works on desktop with a local file system");
+			return;
+		}
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new LazyCryptModal(this.app).open();
-			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
-			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new LazyCryptModal(this.app).open();
-					}
-
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		// Attempt auto-detection of Homebrew paths on macOS if defaults are still "git" and "age"
+		if (this.settings.gitPath === 'git' || this.settings.agePath === 'age') {
+			const commonPaths = ['/usr/local/bin', '/opt/homebrew/bin'];
+			for (const p of commonPaths) {
+				if (this.settings.gitPath === 'git') {
+					const fullGit = path.join(p, 'git');
+					if (fs.existsSync(fullGit)) this.settings.gitPath = fullGit;
 				}
-				return false;
+				if (this.settings.agePath === 'age') {
+					const fullAge = path.join(p, 'age');
+					if (fs.existsSync(fullAge)) this.settings.agePath = fullAge;
+				}
+			}
+		}
+
+		this.lazycrypt = new LazyCrypt(
+			adapter.getBasePath(),
+			this.settings.gitPath,
+			this.settings.agePath
+		);
+
+		this.addRibbonIcon('lock', 'Sync encrypted history', async () => {
+			await this.syncLazyCrypt();
+		});
+
+		this.statusBarItemEl = this.addStatusBarItem();
+		this.updateStatusBar('Idle');
+
+		this.addCommand({
+			id: 'lazycrypt-sync',
+			name: 'Sync encrypted history',
+			callback: async () => {
+				await this.syncLazyCrypt();
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
+		this.addCommand({
+			id: 'lazycrypt-push',
+			name: 'Push encrypted history',
+			callback: async () => {
+				await this.pushLazyCrypt();
+			}
+		});
+
+		this.addCommand({
+			id: 'lazycrypt-init',
+			name: 'Initialize repository',
+			callback: async () => {
+				await this.initLazyCrypt();
+			}
+		});
+
+		this.addCommand({
+			id: 'lazycrypt-pull-decrypt',
+			name: 'Pull and decrypt history',
+			callback: async () => {
+				await this.pullAndDecryptLazyCrypt();
+			}
+		});
+
 		this.addSettingTab(new LazyCryptSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
+		this.registerAutoSync();
+		this.registerAutoPush();
 	}
 
-	onunload() {
+	onunload(): void {
+		if (this.autoSyncIntervalId) window.clearInterval(this.autoSyncIntervalId);
+		if (this.autoPushIntervalId) window.clearInterval(this.autoPushIntervalId);
 	}
 
-	async loadSettings() {
+	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<LazyCryptSettings>);
 	}
 
-	async saveSettings() {
+	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
-	}
-}
-
-class LazyCryptModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
+		if (this.lazycrypt) {
+			const config = await this.lazycrypt.loadConfig();
+			config.encrypted_remote.url = this.settings.encryptedRemoteUrl;
+			config.encrypted_remote.name = this.settings.encryptedRemoteName;
+			config.exclude_patterns = this.settings.excludePatterns.split(',').map(s => s.trim()).filter(s => s !== "");
+			await this.lazycrypt.saveConfig(config);
+			this.lazycrypt.setBinaryPaths(this.settings.gitPath, this.settings.agePath);
+		}
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	updateStatusBar(status: string): void {
+		this.statusBarItemEl.setText(`LazyCrypt: ${status}`);
+	}
+
+	registerAutoSync(): void {
+		if (this.autoSyncIntervalId) window.clearInterval(this.autoSyncIntervalId);
+		if (this.settings.autoSyncInterval > 0) {
+			this.autoSyncIntervalId = window.setInterval(() => {
+				void this.syncLazyCrypt();
+			}, this.settings.autoSyncInterval * 60 * 1000);
+			this.registerInterval(this.autoSyncIntervalId);
+		}
+	}
+
+	registerAutoPush(): void {
+		if (this.autoPushIntervalId) window.clearInterval(this.autoPushIntervalId);
+		if (this.settings.autoPushInterval > 0) {
+			this.autoPushIntervalId = window.setInterval(() => {
+				void this.pushLazyCrypt();
+			}, this.settings.autoPushInterval * 60 * 1000);
+			this.registerInterval(this.autoPushIntervalId);
+		}
+	}
+
+	async initLazyCrypt(): Promise<void> {
+		try {
+			this.updateStatusBar('Initializing...');
+			await this.lazycrypt.initRepo();
+			new Notice('Repository initialized');
+			this.updateStatusBar('Initialized');
+		} catch (error) {
+			new Notice(`Init error: ${(error as Error).message}`);
+			this.updateStatusBar('Init error');
+		}
+	}
+
+	async syncLazyCrypt(): Promise<void> {
+		try {
+			this.updateStatusBar('Syncing...');
+			new Notice('Started syncing encrypted history...');
+			const count = await this.lazycrypt.sync((synced, total) => {
+				const left = total - synced;
+				this.updateStatusBar(`Syncing (${synced}/${total})...`);
+				if (synced % 10 === 0 || synced === total) {
+					new Notice(`Syncing: ${left} commits left...`);
+				}
+			});
+			new Notice(`Finished syncing: ${count} commits encrypted`);
+			this.updateStatusBar('Synced');
+		} catch (error) {
+			const msg = (error as Error).message;
+			if (msg === "Sync aborted by user") {
+				new Notice("Sync stopped by user");
+				this.updateStatusBar('Aborted');
+			} else {
+				new Notice(`Sync error: ${msg}`);
+				this.updateStatusBar('Sync error');
+			}
+		}
+	}
+
+	async pushLazyCrypt(): Promise<void> {
+		try {
+			this.updateStatusBar('Pushing...');
+			new Notice('Pushing to encrypted remote...');
+			await this.lazycrypt.push();
+			new Notice('Finished pushing to encrypted remote');
+			this.updateStatusBar('Pushed');
+		} catch (error) {
+			new Notice(`Push error: ${(error as Error).message}`);
+			this.updateStatusBar('Push error');
+		}
+	}
+
+	async pullAndDecryptLazyCrypt(): Promise<void> {
+		try {
+			this.updateStatusBar('Pulling...');
+			new Notice('Pulling from encrypted remote...');
+			await this.lazycrypt.pull();
+
+			this.updateStatusBar('Decrypting...');
+			new Notice('Starting decryption into plaintext vault...');
+			const count = await this.lazycrypt.decryptSync((synced, total) => {
+				this.updateStatusBar(`Decrypting (${synced}/${total})...`);
+			});
+			new Notice(`Finished recovery: ${count} commits decrypted`);
+			this.updateStatusBar('Recovered');
+		} catch (error) {
+			new Notice(`Recovery error: ${(error as Error).message}`);
+			this.updateStatusBar('Recovery error');
+		}
+	}
+
+	stopSync(): void {
+		this.lazycrypt.stopSync();
+		new Notice('Stopping sync... (will abort after current commit)');
+	}
+
+	clearLock(): void {
+		this.lazycrypt.clearLock();
+		new Notice('Sync lock cleared');
+		this.updateStatusBar('Idle');
 	}
 }

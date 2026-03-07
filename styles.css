@@ -1,8 +1,9 @@
-/*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+.lazycrypt-public-key {
+    display: block;
+    padding: 10px;
+    background-color: var(--background-secondary);
+    border-radius: 4px;
+    font-family: var(--font-monospace);
+    user-select: all;
+    margin-top: 5px;
+}
