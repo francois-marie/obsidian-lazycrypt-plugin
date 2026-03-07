@@ -1,90 +1,102 @@
-# Obsidian Sample Plugin
+# LazyCrypt - Obsidian Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+Maintain an encrypted git history of your Obsidian vault using [age](https://age-encryption.org/) encryption.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+![](assets/example.png)
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+[LazyCrypt](https://github.com/francois-marie/lazycrypt) mirrors every git commit in your vault into a separate *encrypted* repository. Each file is encrypted with your age public key before being committed to the encrypted mirror, which can then be pushed to a remote (e.g., GitHub) for secure off-site backup.
 
-## First time developing plugins?
+## Features
 
-Quick starting guide for new plugin devs:
+- **Encrypted git mirror**: Every plaintext commit is re-committed with all files encrypted via age.
+- **Push to remote**: Push the encrypted mirror to any git remote for secure backup.
+- **Pull and decrypt**: Recover your vault by pulling the encrypted history and decrypting it locally.
+- **Auto-sync and auto-push**: Configurable intervals to automate encryption and pushing.
+- **Progress tracking**: Status bar and notices show sync progress in real time.
+- **Lock management**: Built-in lock file prevents concurrent syncs; force-clear available if stuck.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+## Requirements
 
-## Releasing new releases
+- **Desktop only** (macOS, Linux, Windows). This plugin uses Node.js APIs and is not compatible with Obsidian mobile.
+- **git** must be installed and accessible.
+- **age** (and `age-keygen`) must be installed and accessible. Install via Homebrew: `brew install age`.
+- Your vault must be a git repository with at least one commit.
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+## Installation
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### From community plugins
 
-## Adding your plugin to the community plugin list
+1. Open **Settings -> Community plugins**.
+2. Search for "LazyCrypt" and select **Install**.
+3. Enable the plugin.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+### Manual installation
 
-## How to use
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/francois-marie/obsidian-lazycrypt-plugin/releases).
+2. Copy them to `<your-vault>/.obsidian/plugins/obsidian-lazycrypt-plugin/`.
+3. Reload Obsidian and enable the plugin in **Settings -> Community plugins**.
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## Getting started
 
-## Manually installing the plugin
+1. **Initialize**: Run the command **LazyCrypt: Initialize repository** from the command palette. This creates the `.lazycrypt/` directory, generates an age key pair, and sets up the encrypted bare repository.
+2. **Configure remote**: Open **Settings -> LazyCrypt** and set the **Encrypted remote URL** to your target git remote (e.g., `git@github.com:user/vault-encrypted.git`).
+3. **Sync**: Run **LazyCrypt: Sync encrypted history** or click the lock icon in the ribbon. This encrypts all unsynced commits.
+4. **Push**: Run **LazyCrypt: Push encrypted history** to push the encrypted mirror to your remote.
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## Commands
 
-## Improve code quality with eslint
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
+| Command | Description |
+|---------|-------------|
+| **Sync encrypted history** | Encrypt all new plaintext commits into the encrypted mirror |
+| **Push encrypted history** | Push the encrypted mirror to the configured remote |
+| **Initialize repository** | Set up the `.lazycrypt/` directory, keys, and encrypted repo |
+| **Pull and decrypt history** | Pull from the encrypted remote and decrypt into the vault |
 
-## Funding URL
+## Settings
 
-You can include funding URLs where people who use your plugin can financially support it.
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Encrypted remote URL | Git remote URL for the encrypted mirror | (empty) |
+| Encrypted remote name | Name of the git remote | `origin` |
+| Exclude patterns | Comma-separated patterns to exclude from encryption | `.DS_Store, .git, .lazycrypt` |
+| Auto-sync interval | Minutes between automatic syncs (0 to disable) | `0` |
+| Auto-push interval | Minutes between automatic pushes (0 to disable) | `0` |
+| Git binary path | Path to the `git` executable | `git` |
+| Age binary path | Path to the `age` executable | `age` |
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+## Recovery
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+To recover your vault from the encrypted backup:
+
+1. Create a new vault (or use an empty directory as a git repo).
+2. Install and enable LazyCrypt.
+3. Copy your `.lazycrypt/` directory (containing your `keys/current.key`) into the vault root.
+4. Configure the encrypted remote URL in settings.
+5. Run **LazyCrypt: Pull and decrypt history**.
+
+## Security
+
+- All encryption is performed locally using age. No data is sent to any third-party service.
+- Your private key (`keys/current.key`) never leaves your machine unless you copy it manually.
+- The encrypted remote only ever receives age-encrypted blobs.
+- **Back up your private key** (`<vault>/.lazycrypt/keys/current.key`). Without it, the encrypted history cannot be decrypted.
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Development build (watch mode)
+npm run dev
+
+# Production build
+npm run build
+
+# Lint
+npm run lint
 ```
 
-If you have multiple URLs, you can also do:
+## License
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://docs.obsidian.md
+[MIT](LICENSE)
