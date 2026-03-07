@@ -1,18 +1,18 @@
 import {App, PluginSettingTab, Setting} from "obsidian";
-import MyPlugin from "./main";
+import LazyCryptPlugin from "./main";
 
-export interface MyPluginSettings {
+export interface LazyCryptSettings {
 	mySetting: string;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
+export const DEFAULT_SETTINGS: LazyCryptSettings = {
 	mySetting: 'default'
 }
 
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+export class LazyCryptSettingTab extends PluginSettingTab {
+	plugin: LazyCryptPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: LazyCryptPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

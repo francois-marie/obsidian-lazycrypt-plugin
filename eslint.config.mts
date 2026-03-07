@@ -22,6 +22,12 @@ export default tseslint.config(
 		},
 	},
 	...obsidianmd.configs.recommended,
+	{
+		files: ["package.json"],
+		rules: {
+			"depend/ban-dependencies": "off"
+		}
+	},
 	globalIgnores([
 		"node_modules",
 		"dist",
