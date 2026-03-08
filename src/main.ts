@@ -53,7 +53,7 @@ export default class LazyCryptPlugin extends Plugin {
 		this.updateStatusBar('Idle');
 
 		this.addCommand({
-			id: 'lazycrypt-sync',
+			id: 'sync-encrypted-history',
 			name: 'Sync encrypted history',
 			callback: async () => {
 				await this.syncLazyCrypt();
@@ -61,7 +61,7 @@ export default class LazyCryptPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'lazycrypt-push',
+			id: 'push-encrypted-history',
 			name: 'Push encrypted history',
 			callback: async () => {
 				await this.pushLazyCrypt();
@@ -69,7 +69,7 @@ export default class LazyCryptPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'lazycrypt-init',
+			id: 'init-repository',
 			name: 'Initialize repository',
 			callback: async () => {
 				await this.initLazyCrypt();
@@ -77,7 +77,7 @@ export default class LazyCryptPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: 'lazycrypt-pull-decrypt',
+			id: 'pull-decrypt-history',
 			name: 'Pull and decrypt history',
 			callback: async () => {
 				await this.pullAndDecryptLazyCrypt();
