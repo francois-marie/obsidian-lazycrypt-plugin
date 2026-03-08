@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-lazycrypt-plugin",
+	"id": "lazycrypt",
 	"name": "LazyCrypt",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Maintain an encrypted git history of your vault using age.",
-	"author": "LazyCrypt",
-	"authorUrl": "https://github.com/francois-marie/obsidian-lazycrypt-plugin",
+	"author": "François-Marie Le Régent",
+	"authorUrl": "https://github.com/francois-marie",
 	"isDesktopOnly": true
 }
