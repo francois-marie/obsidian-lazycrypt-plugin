@@ -85,25 +85,26 @@ export class LazyCrypt {
         });
     }
 
-    async loadConfig(): Promise<Config> {
+    loadConfig(): Promise<Config> {
         if (!fs.existsSync(this.configPath())) {
-            return {
+            return Promise.resolve({
                 version: 1,
                 current_key: 'keys/current.key',
                 encrypted_remote: { name: 'origin', url: '' },
                 exclude_patterns: ['.DS_Store', '.git', '.lazycrypt'],
                 retired_keys: []
-            };
+            });
         }
         const content = fs.readFileSync(this.configPath(), 'utf8');
         this.config = yaml.load(content) as Config;
-        return this.config;
+        return Promise.resolve(this.config);
     }
 
-    async saveConfig(config: Config): Promise<void> {
+    saveConfig(config: Config): Promise<void> {
         this.config = config;
         if (!fs.existsSync(this.lazycryptDir())) fs.mkdirSync(this.lazycryptDir(), { recursive: true });
         fs.writeFileSync(this.configPath(), yaml.dump(config), 'utf8');
+        return Promise.resolve();
     }
 
     async initRepo(): Promise<void> {
@@ -133,15 +134,15 @@ export class LazyCrypt {
         });
     }
 
-    async getPublicKey(): Promise<string> {
+    getPublicKey(): Promise<string> {
         const keyPath = this.currentKeyPath();
-        if (!fs.existsSync(keyPath)) return "";
+        if (!fs.existsSync(keyPath)) return Promise.resolve("");
         const content = fs.readFileSync(keyPath, 'utf8');
         const match = content.match(/# public key: (age1[a-z0-9]+)/);
-        return (match && match[1]) ? match[1] : "";
+        return Promise.resolve((match && match[1]) ? match[1] : "");
     }
 
-    private async loadCommitMap(): Promise<Map<string, string>> {
+    private loadCommitMap(): Promise<Map<string, string>> {
         const map = new Map<string, string>();
         if (fs.existsSync(this.commitMapPath())) {
             const content = fs.readFileSync(this.commitMapPath(), 'utf8');
@@ -150,15 +151,16 @@ export class LazyCrypt {
                 if (plain && enc) map.set(plain, enc);
             });
         }
-        return map;
+        return Promise.resolve(map);
     }
 
-    private async saveCommitMap(map: Map<string, string>): Promise<void> {
+    private saveCommitMap(map: Map<string, string>): Promise<void> {
         let content = "";
         for (const [plain, enc] of map.entries()) {
             content += `${plain}:${enc}\n`;
         }
         fs.writeFileSync(this.commitMapPath(), content, 'utf8');
+        return Promise.resolve();
     }
 
     async getUnsyncedCommitCount(): Promise<number> {
