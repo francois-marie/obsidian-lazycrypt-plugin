@@ -49,8 +49,7 @@ export class LazyCryptSettingTab extends PluginSettingTab {
 			.setName('Encrypted remote name')
 			.setDesc('The name of the Git remote (default: origin).')
 			.addText(text => text
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder value
-				.setPlaceholder('origin')
+				.setPlaceholder('Origin')
 				.setValue(this.plugin.settings.encryptedRemoteName)
 				.onChange(async (value) => {
 					this.plugin.settings.encryptedRemoteName = value;
@@ -61,8 +60,7 @@ export class LazyCryptSettingTab extends PluginSettingTab {
 			.setName('Exclude patterns')
 			.setDesc('Comma-separated list of file or folder names to exclude from encryption.')
 			.addText(text => text
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder value
-				.setPlaceholder('.DS_Store, .git, .lazycrypt')
+				.setPlaceholder('Comma-separated names to exclude')
 				.setValue(this.plugin.settings.excludePatterns)
 				.onChange(async (value) => {
 					this.plugin.settings.excludePatterns = value;
@@ -103,8 +101,7 @@ export class LazyCryptSettingTab extends PluginSettingTab {
 			.setName('Git binary path')
 			.setDesc('Path to the Git executable (e.g., /usr/local/bin/git). Leave as "git" if it is in your system path.')
 			.addText(text => text
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder value
-				.setPlaceholder('git')
+				.setPlaceholder('Git')
 				.setValue(this.plugin.settings.gitPath)
 				.onChange(async (value) => {
 					this.plugin.settings.gitPath = value;
@@ -115,8 +112,7 @@ export class LazyCryptSettingTab extends PluginSettingTab {
 			.setName('Age binary path')
 			.setDesc('Path to the Age executable (e.g., /usr/local/bin/age). Leave as "age" if it is in your system path.')
 			.addText(text => text
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- placeholder value
-				.setPlaceholder('age')
+				.setPlaceholder('Age')
 				.setValue(this.plugin.settings.agePath)
 				.onChange(async (value) => {
 					this.plugin.settings.agePath = value;
